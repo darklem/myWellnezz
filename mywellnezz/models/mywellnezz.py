@@ -83,7 +83,7 @@ class MyWellnezz:
                 print(f'Event not found: {ex}')
             if not event or event.is_ended() or event.is_started():
                 break
-            elif event.available_places > 0 or event.is_participant:
+            elif (event.available_places > 0 or event.is_participant) and ((event.start.replace(hour=0, minute=0, second=0)-datetime.now()) < timedelta(days=14)):
                 if user.token is None or not user.token:
                     await user.refresh()
                 try:

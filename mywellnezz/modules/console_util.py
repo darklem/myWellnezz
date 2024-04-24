@@ -88,7 +88,7 @@ async def _print_facility_logo(facility: Facility):
 
 
 def _print_events(events: Dict[str, Event]):
-    ptc = PrettyTable(['I', 'Name', 'Teacher', 'Room', 'Start', 'End', 'Status', 'Free'])
+    ptc = PrettyTable(['I', 'Name', 'Teacher', 'Room', 'Start', 'Bookable', 'Status', 'Free'])
     for ic, e in enumerate(list(events.values())):
         e.add_table_row(ic, ptc)
     print(ptc)

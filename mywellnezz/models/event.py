@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional, Set
 import hashlib
 
@@ -120,7 +120,8 @@ class Event:
             color_status = colorama.Fore.RED + self.status + colorama.Style.RESET_ALL
         table.add_row(
             [index, self.name, self.assigned_to, self.room, self.start.strftime('%A %d %m  %H:%M').capitalize(),
-             self.end.strftime('%H:%M'),
+             #self.end.strftime('%H:%M'),
+             (self.start.replace(hour=0, minute=0, second=0)-datetime.now()) < timedelta(days=14),
              color_status, self.available_places])
 
 
@@ -167,7 +168,7 @@ async def update_events(user: UserContext, facility: Facility, start: int) -> Op
                 "X-MWAPPS-CLIENT": "MywellnessAppAndroid40"
             }
             payload = {
-                "dateLimit": 1,
+                "dateLimit": 20,
                 "dateStart": start,
                 "eventType": "Class",
                 "timeScope": "Custom",

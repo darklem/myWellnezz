@@ -132,7 +132,7 @@ async def main_loop(mw: MyWellnezz, config: Union[Config, Any]):
                             await asyncio.gather(*mw.book_tasks.values())
                             break
                     await mw.set_loops_timeout(events)
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
             except Exception as ex:
                 print(f'Error: {ex}')
         await asyncio.sleep(0)
