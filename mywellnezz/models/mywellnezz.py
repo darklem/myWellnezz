@@ -4,6 +4,7 @@ from asyncio import Task, Lock
 from datetime import datetime, timedelta
 from random import randint
 from typing import Optional, Dict
+from random import randint
 
 from models.config import Config
 from models.event import Event, update_events, action_event, check_event_diff
@@ -83,7 +84,7 @@ class MyWellnezz:
                 print(f'Event not found: {ex}')
             if not event or event.is_ended() or event.is_started():
                 break
-            elif (event.available_places > 0 or event.is_participant) and ((event.start.replace(hour=0, minute=0, second=0)-datetime.now()) < timedelta(days=14)):
+            elif (event.available_places > 0 or event.is_participant) and ((event.start.replace(hour=0, minute=randint(0,1), second=randint(11,59))-datetime.now()) < timedelta(days=14)):
                 if user.token is None or not user.token:
                     await user.refresh()
                 try:
@@ -115,7 +116,7 @@ class MyWellnezz:
                                            self.cycle_timeout):
                     events = await self.update_events_event(user, facility, config, events)
                 self.cycle_iteration += 1
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
             except Exception as e:
                 print(f'Error in {inspect.currentframe().f_code.co_name}: {e}')
 
