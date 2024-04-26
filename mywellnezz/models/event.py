@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Set
 import hashlib
+from random import randint
 
 import colorama
 from dateutil import parser
@@ -67,6 +68,7 @@ class Event:
             # self.participants: [] = kwargs.get('extData')
             # self.skus: [] = kwargs.get('skus')
             self.uid: str = hashlib.sha256(f"{self.id}/{self.partition_date}".encode()).hexdigest()
+            self.random: int = randint(0,120)
             self.start: datetime = None if self.partition_date is None else parser.parse(
                 f'{self.partition_date}T{str(self.start_hour).zfill(2)}:{str(self.start_minutes).zfill(2)}:00')
             self.end: datetime = None if self.partition_date is None else parser.parse(
@@ -146,6 +148,7 @@ async def action_event(user: UserContext, event: Event) -> bool:
         "token": user.token
     }
     try:
+        await asyncio.sleep(event.random%2) 
         response = await async_post(url, headers, payload)
         if not response:
             print('Something bad happened')
