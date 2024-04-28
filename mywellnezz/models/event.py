@@ -157,7 +157,7 @@ async def action_event(user: UserContext, event: Event) -> bool:
         if not response:
             print('Something bad happened')
         else:
-            logger.info(f"[+] Event {event.name}-{event.partition_date} booked for {user.last_name} at {datetime.now()}")
+            logger.info(f"[+] Event {event.name}-{event.partition_date} {"unbooked" if event.is_participant else "booked"} for {user.last_name} at {datetime.now()}")
 
             return bool(response['data'])
     except Exception as ex:
