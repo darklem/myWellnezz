@@ -41,7 +41,7 @@ class Event:
             self.waiting_list_counter: int = kwargs.get('waitingListCounter')
             self.day_in_advance_start_hour: int = kwargs.get('dayInAdvanceStartHour')
             self.day_in_advance_start_minutes: int = kwargs.get('dayInAdvanceStartMinutes')
-            self.booking_opens_on: datetime = datetime.strftime(self.partition_date,"%Y%m%d")-timedelta(days=14) if kwargs.get('bookingOpensOn') is None else parser.parse(kwargs.get('bookingOpensOn')).replace(tzinfo=None)
+            self.booking_opens_on: datetime = self.partition_date.strftime("%Y%m%d")-timedelta(days=14) if kwargs.get('bookingOpensOn') is None else parser.parse(kwargs.get('bookingOpensOn')).replace(tzinfo=None)
             self.available_places: int = kwargs.get('availablePlaces')
             self.booking_user_status: str = kwargs.get('bookingUserStatus')
             self.booking_available: bool = kwargs.get('bookingAvailable')
