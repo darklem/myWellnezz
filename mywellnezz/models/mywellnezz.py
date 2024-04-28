@@ -115,7 +115,7 @@ class MyWellnezz:
                                            self.cycle_timeout):
                     events = await self.update_events_event(user, facility, config, events)
                 self.cycle_iteration += 1
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
             except Exception as e:
                 print(f'Error in {inspect.currentframe().f_code.co_name}: {e}')
 

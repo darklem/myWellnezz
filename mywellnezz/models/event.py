@@ -68,7 +68,7 @@ class Event:
             # self.participants: [] = kwargs.get('extData')
             # self.skus: [] = kwargs.get('skus')
             self.uid: str = hashlib.sha256(f"{self.id}/{self.partition_date}".encode()).hexdigest()
-            self.random_place: int = randint(2,8)
+            self.random_place: int = randint(3,8)
             self.start: datetime = None if self.partition_date is None else parser.parse(
                 f'{self.partition_date}T{str(self.start_hour).zfill(2)}:{str(self.start_minutes).zfill(2)}:00')
             self.end: datetime = None if self.partition_date is None else parser.parse(
@@ -85,10 +85,10 @@ class Event:
         return datetime.now() >= self.start
 
     def is_bookable(self):
-        return self.can_book and (self.start > datetime.now() >= self.booking_opens_on or self.booking_opens_on - timedelta(hours=24) < datetime.now())
+        return self.can_book and (self.start > datetime.now() >= self.booking_opens_on) 
 
     def is_randomized(self):
-        return self.available_places <= self.random_place
+        return (self.available_places <= self.random_place) or (self.booking_opens_on + timedelta(hours=24) < datetime.now())
 
     def get_status(self):
         if not self.booking_available:
@@ -140,6 +140,7 @@ def check_event_diff(events: Dict[str, Event], new_events: Dict[str, Event]) -> 
 
 
 async def action_event(user: UserContext, event: Event) -> bool:
+    logger.info(f"[+] Atempting an action on event {event.name}-{event.partition_date} for {user.last_name} with {event.available_places} available places")
     url = f'{schema}services.{base_url}{api_book_app}/{event.id}/{"unbook" if event.is_participant else "book"}'
     headers = {
         "User-Agent": fake_ua_android(),
@@ -152,7 +153,6 @@ async def action_event(user: UserContext, event: Event) -> bool:
         "token": user.token
     }
     try:
-        await asyncio.sleep(event.random_place%2) 
         response = await async_post(url, headers, payload)
         if not response:
             print('Something bad happened')
