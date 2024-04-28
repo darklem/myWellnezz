@@ -75,7 +75,6 @@ class Event:
                 f'{self.partition_date}T{str(self.end_hour).zfill(2)}:{str(self.end_minutes).zfill(2)}:00')
             self.can_book: bool = self.booking_user_status == 'CanBook'
             self.status: str = self.get_status()
-            self.booked_log: datetime = None
         except Exception as ex:
             logger.error(f'Error creating event: {ex}')
 
@@ -129,7 +128,6 @@ class Event:
              self.booking_opens_on,
              color_status, 
              self.available_places,
-             self.booked_log.strftime('%d%m-%H:%M'),
              ])
 
 
@@ -154,12 +152,13 @@ async def action_event(user: UserContext, event: Event) -> bool:
         "token": user.token
     }
     try:
-        await asyncio.sleep(event.random%2) 
+        await asyncio.sleep(event.random_place%2) 
         response = await async_post(url, headers, payload)
         if not response:
             print('Something bad happened')
         else:
-            event.booked_log = datetime.now()
+            logger.info(f"[+] Event {event.name}-{event.partition_date} booked for {user.last_name} at {datetime.now()}")
+
             return bool(response['data'])
     except Exception as ex:
         print(f'Connection Error {ex}')

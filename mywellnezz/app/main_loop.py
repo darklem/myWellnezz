@@ -10,6 +10,7 @@ from models.facility import Facility, my_facilities
 from models.mywellnezz import MyWellnezz
 from models.usercontext import create_user, UserContext
 from modules.console_util import print_missing_facility, print_facilities, print_users
+from loguru import logger
 
 
 async def get_config(mw: MyWellnezz) -> Optional[Config]:
@@ -145,6 +146,7 @@ async def awake():
 
 
 def main():
+    logger.add("mywellness.log")
     loop = asyncio.get_event_loop()
     loop.create_task(awake())
     mw = MyWellnezz()
