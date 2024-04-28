@@ -41,7 +41,7 @@ class Event:
             self.waiting_list_counter: int = kwargs.get('waitingListCounter')
             self.day_in_advance_start_hour: int = kwargs.get('dayInAdvanceStartHour')
             self.day_in_advance_start_minutes: int = kwargs.get('dayInAdvanceStartMinutes')
-            self.booking_opens_on: datetime = datetime.now() if kwargs.get('bookingOpensOn') is None else parser.parse(kwargs.get('bookingOpensOn')).replace(tzinfo=None)
+            self.booking_opens_on: datetime = datetime.strftime(self.partitionDate,"%Y%m%d")-timedelta(days=14) if kwargs.get('bookingOpensOn') is None else parser.parse(kwargs.get('bookingOpensOn')).replace(tzinfo=None)
             self.available_places: int = kwargs.get('availablePlaces')
             self.booking_user_status: str = kwargs.get('bookingUserStatus')
             self.booking_available: bool = kwargs.get('bookingAvailable')
@@ -68,13 +68,14 @@ class Event:
             # self.participants: [] = kwargs.get('extData')
             # self.skus: [] = kwargs.get('skus')
             self.uid: str = hashlib.sha256(f"{self.id}/{self.partition_date}".encode()).hexdigest()
-            self.random: int = randint(0,120)
+            self.random_place: int = randint(2,8)
             self.start: datetime = None if self.partition_date is None else parser.parse(
                 f'{self.partition_date}T{str(self.start_hour).zfill(2)}:{str(self.start_minutes).zfill(2)}:00')
             self.end: datetime = None if self.partition_date is None else parser.parse(
                 f'{self.partition_date}T{str(self.end_hour).zfill(2)}:{str(self.end_minutes).zfill(2)}:00')
             self.can_book: bool = self.booking_user_status == 'CanBook'
             self.status: str = self.get_status()
+            self.booked_log: datetime = None
         except Exception as ex:
             logger.error(f'Error creating event: {ex}')
 
@@ -86,6 +87,9 @@ class Event:
 
     def is_bookable(self):
         return self.can_book and self.start > datetime.now() >= self.booking_opens_on
+
+    def is_randomized(self):
+        return self.available_places <= self.random_place
 
     def get_status(self):
         if not self.booking_available:
@@ -122,9 +126,11 @@ class Event:
             color_status = colorama.Fore.RED + self.status + colorama.Style.RESET_ALL
         table.add_row(
             [index, self.name, self.assigned_to, self.room, self.start.strftime('%A %d %m  %H:%M').capitalize(),
-             #self.end.strftime('%H:%M'),
-             (self.start.replace(hour=0, minute=0, second=0)-datetime.now()) < timedelta(days=14),
-             color_status, self.available_places])
+             self.booking_opens_on,
+             color_status, 
+             self.available_places,
+             self.booked_log.strftime('%d%m-%H:%M'),
+             ])
 
 
 def check_event_diff(events: Dict[str, Event], new_events: Dict[str, Event]) -> Set[str]:
@@ -153,6 +159,7 @@ async def action_event(user: UserContext, event: Event) -> bool:
         if not response:
             print('Something bad happened')
         else:
+            event.booked_log = datetime.now()
             return bool(response['data'])
     except Exception as ex:
         print(f'Connection Error {ex}')
