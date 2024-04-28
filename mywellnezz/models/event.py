@@ -85,7 +85,7 @@ class Event:
         return datetime.now() >= self.start
 
     def is_bookable(self):
-        return self.can_book and self.start > datetime.now() >= self.booking_opens_on
+        return self.can_book and (self.start > datetime.now() >= self.booking_opens_on or self.booking_opens_on - timedelta(hours=24) < datetime.now())
 
     def is_randomized(self):
         return self.available_places <= self.random_place
