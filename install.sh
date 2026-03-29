@@ -165,8 +165,8 @@ Group=%i
 WorkingDirectory=${INSTALL_DIR}
 
 ExecStart=${VENV_DIR}/bin/python -m uvicorn mywellnezz.web_app:app \\
-    --host \${MYWELLNEZZ_HOST:-0.0.0.0} \\
-    --port \${MYWELLNEZZ_PORT:-8080} \\
+    --host \${MYWELLNEZZ_HOST} \\
+    --port \${MYWELLNEZZ_PORT} \\
     --log-level info
 
 EnvironmentFile=-${ENV_FILE}

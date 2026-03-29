@@ -14,12 +14,13 @@ WorkingDirectory=/opt/mywellnezz
 
 # ── Runtime ───────────────────────────────────────────────────────────────
 ExecStart=/opt/mywellnezz/venv/bin/python -m uvicorn mywellnezz.web_app:app \
-    --host ${MYWELLNEZZ_HOST:-0.0.0.0} \
-    --port ${MYWELLNEZZ_PORT:-8080} \
+    --host ${MYWELLNEZZ_HOST} \
+    --port ${MYWELLNEZZ_PORT} \
     --log-level info
 
 # ── Environment ───────────────────────────────────────────────────────────
-# Override these in /etc/mywellnezz.conf (EnvironmentFile) or edit here
+# Defaults – override via /etc/mywellnezz.conf (EnvironmentFile)
+# Note: systemd resolves ${VAR} but not bash-style ${VAR:-default} syntax.
 Environment="MYWELLNEZZ_HOST=0.0.0.0"
 Environment="MYWELLNEZZ_PORT=8080"
 EnvironmentFile=-/etc/mywellnezz.conf
