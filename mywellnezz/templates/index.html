@@ -303,6 +303,15 @@
                 </svg>
                 <span x-text="fmtDate(event.start)"></span>
               </li>
+              <!-- Booking opens on – only shown for Planned / Booking-pending events -->
+              <li x-show="['Planned','Booking'].includes(event.status) && event.booking_opens_on"
+                class="flex items-center gap-1.5 text-blue-500">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                </svg>
+                <span>Résa ouvre le <span x-text="fmtDate(event.booking_opens_on)"></span></span>
+              </li>
               <li class="flex items-center gap-1.5">
                 <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -672,20 +681,22 @@
         }[s] || s;
       },
       isBookable(e) {
-        return ['Open', 'Full', 'Booked', 'WaitingList'].includes(e.status);
+        return ['Open', 'Full', 'Booked', 'WaitingList', 'Planned', 'Booking'].includes(e.status);
       },
       bookBtnCls(e) {
         if (!this.isBookable(e)) return 'bg-gray-100 text-gray-400 cursor-not-allowed';
-        if (e.status === 'Booked')   return 'bg-red-100 hover:bg-red-200 text-red-600 cursor-pointer';
-        if (e.status === 'Booking')  return 'bg-yellow-100 text-yellow-600 cursor-wait';
+        if (e.status === 'Booked')  return 'bg-red-100 hover:bg-red-200 text-red-600 cursor-pointer';
+        if (e.status === 'Booking') return 'bg-yellow-100 hover:bg-yellow-200 text-yellow-700 cursor-pointer';
+        if (e.status === 'Planned') return 'bg-blue-100 hover:bg-blue-200 text-blue-700 cursor-pointer';
         return 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer shadow-sm';
       },
       bookBtnTxt(e) {
         return {
           Booked:      'Annuler la réservation',
-          Booking:     'Réservation en cours…',
+          Booking:     'En attente… (annuler)',
           Full:        'Rejoindre la liste',
           WaitingList: 'Quitter la liste',
+          Planned:     'Pré-inscrire',
         }[e.status] || (this.isBookable(e) ? 'Réserver' : 'Indisponible');
       },
       fmtDate(iso) {
