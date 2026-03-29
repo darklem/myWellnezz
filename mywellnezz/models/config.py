@@ -15,11 +15,11 @@ config_filename = 'conf.json'
 
 class Config:
     def __init__(self, **kwargs):
-        self.user_choice: Optional[int] = None
-        self.facility_choice: Optional[int] = None
-        self.auto_book: bool = True
+        self.user_choice: Optional[int] = kwargs.get('user_choice')
+        self.facility_choice: Optional[int] = kwargs.get('facility_choice')
+        self.auto_book: bool = kwargs.get('auto_book', True)
         if kwargs:
-            self.users: List[UserContext] = [UserContext(**us) for us in kwargs.get('users')]
+            self.users: List[UserContext] = [UserContext(**us) for us in kwargs.get('users', [])]
         else:
             self.users: List[UserContext] = []
 
