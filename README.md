@@ -3,51 +3,151 @@
 
 ![myWellnezz Image](mw.png?raw=true "myWellnezz")
 
-MyWellnezz is an application designed to help users view and register for gym sessions at fitness centers that use the MyWellness app.
+myWellnezz is an application that helps users view and register for gym sessions at fitness centers using the MyWellness app. It is available in two modes: a **CLI** for interactive terminal use, and a **web interface** that runs as a background service.
 
 ## Features
 
-* View Gym Sessions
-* Register/Unregister for Sessions
-* Gym Information
+- View available gym sessions
+- Register / unregister for sessions
+- Automatic booking when a spot opens up (auto-book)
+- Multi-account support
+- **Web interface** with real-time updates (WebSocket)
+- **systemd service** for always-on background operation
 
 ## Disclaimer
 
 This application is intended for informational and personal use only.
-Please note that the creators of this app are not affiliated with MyWellness or the company that developed it in any way.
+The creators are not affiliated with MyWellness or its parent company in any way.
 
-## Installation
+---
+
+## Web Interface (recommended)
+
+### Automatic installation (systemd service)
+
+```bash
+git clone https://github.com/AeonDave/myWellnezz.git
+cd myWellnezz
+sudo ./install.sh
+```
+
+The installer:
+1. Copies the project to `/opt/mywellnezz`
+2. Creates a Python virtual environment and installs dependencies
+3. Registers and starts the `mywellnezz@<user>` systemd service
+
+Open **http://localhost:8080** in your browser, then follow the setup wizard:
+1. Enter your MyWellness email and password
+2. Select your gym
+
+### Manual start (development / no systemd)
+
+```bash
+pip install -r requirements-web.txt
+cd mywellnezz
+uvicorn web_app:app --host 0.0.0.0 --port 8080
+```
+
+Or with Poetry:
+
+```bash
+poetry install
+poetry run mywellnezz-web
+```
+
+### Service management
+
+```bash
+# Status
+sudo systemctl status mywellnezz@$USER
+
+# Logs (live)
+journalctl -u mywellnezz@$USER -f
+
+# Restart
+sudo systemctl restart mywellnezz@$USER
+
+# Uninstall
+sudo ./install.sh --uninstall
+```
+
+### Configuration
+
+Runtime settings are stored in `/etc/mywellnezz.conf`:
+
+```ini
+MYWELLNEZZ_HOST=0.0.0.0
+MYWELLNEZZ_PORT=8080
+```
+
+---
+
+## CLI Mode
 
 ### Requirements
 
-* Python >=3.11
-* Clone this repository: git clone https://github.com/AeonDave/myWellnezz.git
+- Python >= 3.11
 
 ### Run with Poetry
 
-* poetry install
-* poetry run mywellnezz
+```bash
+poetry install
+poetry run mywellnezz
+```
 
-### Run Manual
+### Run manually
 
-* python -m venv venv
-* source venv/bin/activate
-* pip install -r requirements.txt
-* cd mywellnezz
-* python main.py
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cd mywellnezz && python main.py
+```
 
-### Create binary
+### Create a standalone binary
 
-* poetry install
-* poetry run build
+```bash
+poetry install
+poetry run build
+```
 
-Your binary will be in the dist folder.
+The binary will be generated in the `dist/` folder.
 
-### Contributing
+---
 
-Contributions are welcome! If you'd like to improve the MyWellnezz app, feel free to open a pull request.
+## Project structure
 
-### License
+```
+myWellnezz/
+├── mywellnezz/
+│   ├── main.py              # CLI entry point
+│   ├── web_app.py           # Web service (FastAPI)
+│   ├── templates/
+│   │   └── index.html       # Web UI (Tailwind CSS + Alpine.js)
+│   ├── app/
+│   │   └── constants.py     # API endpoints, app metadata
+│   ├── models/
+│   │   ├── config.py        # Configuration persistence
+│   │   ├── event.py         # Gym class model & booking logic
+│   │   ├── facility.py      # Gym/facility model
+│   │   ├── mywellnezz.py    # Core controller (async event loop)
+│   │   └── usercontext.py   # Authentication & user profile
+│   └── modules/
+│       ├── http_calls.py    # Async HTTP client
+│       ├── math_util.py     # Credential obfuscation
+│       └── ...
+├── mywellnezz.service       # systemd unit template
+├── install.sh               # Automated installer
+├── requirements-web.txt     # Web service dependencies
+└── pyproject.toml
+```
 
-This project is licensed under the Apache 2.0 License.
+---
 
+## Contributing
+
+Contributions are welcome! Feel free to open a pull request.
+
+## License
+
+This project is licensed under the [Apache 2.0 License](LICENSE).
