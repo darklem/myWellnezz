@@ -1,0 +1,46 @@
+[Unit]
+Description=myWellnezz – Gym Class Booking Web Service
+Documentation=https://github.com/darklem/mywellnezz
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# ── User / working directory ──────────────────────────────────────────────
+# Replace "youruser" with the actual Linux user, or use the install.sh script
+User=%i
+Group=%i
+WorkingDirectory=/opt/mywellnezz
+
+# ── Runtime ───────────────────────────────────────────────────────────────
+ExecStart=/opt/mywellnezz/venv/bin/python -m uvicorn mywellnezz.web_app:app \
+    --host ${MYWELLNEZZ_HOST:-0.0.0.0} \
+    --port ${MYWELLNEZZ_PORT:-8080} \
+    --log-level info
+
+# ── Environment ───────────────────────────────────────────────────────────
+# Override these in /etc/mywellnezz.conf (EnvironmentFile) or edit here
+Environment="MYWELLNEZZ_HOST=0.0.0.0"
+Environment="MYWELLNEZZ_PORT=8080"
+EnvironmentFile=-/etc/mywellnezz.conf
+
+# ── Restart policy ────────────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# ── Security hardening ────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/opt/mywellnezz
+
+# ── Logging ───────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mywellnezz
+
+[Install]
+WantedBy=multi-user.target

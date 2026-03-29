@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>myWellnezz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .slide-in { animation: slideIn 0.25s ease-out; }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans" x-data="app()" x-init="init()">
+
+  <!-- ======================================================= NAVBAR -->
+  <nav class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+
+      <!-- Logo + facility name -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+          </svg>
+        </div>
+        <span class="font-bold text-gray-800 text-lg tracking-tight">myWellnezz</span>
+        <span x-show="status.current_facility"
+          class="hidden sm:inline text-sm text-gray-400 font-normal"
+          x-text="'— ' + (status.current_facility?.name || '')"></span>
+      </div>
+
+      <!-- Right side: live indicator + settings -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 text-xs text-gray-500">
+          <span class="w-2 h-2 rounded-full"
+            :class="wsConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-300'"></span>
+          <span class="hidden sm:inline" x-text="wsConnected ? 'En direct' : 'Hors ligne'"></span>
+        </div>
+        <button @click="showSettings = true"
+          class="p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94
+              3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724
+              1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0
+              00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0
+              00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0
+              00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0
+              001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ======================================================= MAIN -->
+  <main class="max-w-7xl mx-auto px-4 py-8">
+
+    <!-- ─────────────────────── SETUP WIZARD ─────────────────────── -->
+    <div x-show="!status.configured" x-cloak>
+
+      <!-- Step 1 – Login -->
+      <div x-show="setupStep === 1" class="max-w-md mx-auto">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-gray-800">Connexion</h2>
+              <p class="text-sm text-gray-500">Compte MyWellness</p>
+            </div>
+          </div>
+
+          <!-- Error banner -->
+          <div x-show="loginError" x-cloak
+            class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-start gap-2">
+            <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span x-text="loginError"></span>
+          </div>
+
+          <!-- Existing users list -->
+          <template x-if="users.length > 0">
+            <div class="mb-6">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Comptes enregistrés</p>
+              <div class="space-y-2">
+                <template x-for="(u, i) in users" :key="i">
+                  <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-800 truncate" x-text="u.name || u.email"></p>
+                      <p class="text-xs text-gray-500 truncate" x-text="u.email"></p>
+                    </div>
+                    <div class="flex gap-1.5 ml-3">
+                      <button @click="selectUser(i)"
+                        class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-xs font-semibold rounded-lg transition-colors">
+                        Choisir
+                      </button>
+                      <button @click="deleteUser(i)"
+                        class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-semibold rounded-lg transition-colors">
+                        Suppr.
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <div class="relative my-5">
+                <div class="absolute inset-0 flex items-center">
+                  <div class="w-full border-t border-gray-200"></div>
+                </div>
+                <div class="relative flex justify-center">
+                  <span class="bg-white px-3 text-xs text-gray-400">ou ajouter un compte</span>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Login form -->
+          <form @submit.prevent="doLogin()">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                <input x-model="loginForm.email" type="email" required
+                  placeholder="votre@email.com"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm
+                         focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition"/>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Mot de passe</label>
+                <input x-model="loginForm.password" type="password" required
+                  placeholder="••••••••"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm
+                         focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition"/>
+              </div>
+              <button type="submit" :disabled="loginLoading"
+                class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-60
+                       text-white font-semibold rounded-xl transition-colors text-sm shadow-sm">
+                <span x-text="loginLoading ? 'Connexion en cours...' : 'Se connecter'"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Step 2 – Select facility -->
+      <div x-show="setupStep === 2" class="max-w-md mx-auto">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-gray-800">Choisir une salle</h2>
+              <p class="text-sm text-gray-500">Sélectionnez votre club</p>
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div x-show="facilitiesLoading" class="flex flex-col items-center py-10 text-gray-400">
+            <svg class="w-7 h-7 spin mb-2" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <p class="text-sm">Chargement des salles…</p>
+          </div>
+
+          <!-- Facilities list -->
+          <div x-show="!facilitiesLoading" class="space-y-2">
+            <template x-for="(f, i) in facilities" :key="i">
+              <button @click="selectFacility(i)"
+                class="w-full text-left p-4 bg-gray-50 hover:bg-yellow-50 border border-gray-200
+                       hover:border-yellow-300 rounded-xl transition-all group">
+                <p class="font-semibold text-gray-800 group-hover:text-yellow-700" x-text="f.name"></p>
+                <p class="text-xs text-gray-500 mt-0.5" x-text="f.address || ''"></p>
+              </button>
+            </template>
+            <div x-show="!facilitiesLoading && facilities.length === 0"
+              class="text-center py-6 text-sm text-gray-400">Aucune salle trouvée</div>
+          </div>
+
+          <button @click="setupStep = 1"
+            class="mt-4 w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            ← Retour
+          </button>
+        </div>
+      </div>
+    </div><!-- /setup wizard -->
+
+
+    <!-- ─────────────────────── DASHBOARD ─────────────────────── -->
+    <div x-show="status.configured" x-cloak>
+
+      <!-- Top bar -->
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-xl font-bold text-gray-800"
+            x-text="status.current_user?.name || 'Tableau de bord'"></h1>
+          <p class="text-sm text-gray-500 mt-0.5"
+            x-text="events.length + ' cours disponibles'"></p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+
+          <!-- Auto-book toggle -->
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <span class="text-sm font-medium text-gray-600">Résa auto</span>
+            <button type="button" @click="toggleAutoBook()"
+              class="relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1"
+              :class="autoBook ? 'bg-yellow-400' : 'bg-gray-200'">
+              <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                :class="autoBook ? 'translate-x-5' : ''"></span>
+            </button>
+          </label>
+
+          <!-- Refresh -->
+          <button @click="refreshEvents()" :disabled="refreshing"
+            class="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 shadow-sm
+                   hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50">
+            <svg class="w-4 h-4" :class="refreshing ? 'spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003
+                   8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Actualiser
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading spinner -->
+      <div x-show="eventsLoading" class="flex flex-col items-center py-20 text-gray-400">
+        <svg class="w-9 h-9 spin mb-3" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        <p class="text-sm">Chargement des cours…</p>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="!eventsLoading && events.length === 0"
+        class="flex flex-col items-center py-20 text-gray-400">
+        <svg class="w-14 h-14 mb-4 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0
+               00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p class="font-medium">Aucun cours disponible</p>
+        <p class="text-sm mt-1">Revenez plus tard ou actualisez</p>
+      </div>
+
+      <!-- Events grid -->
+      <div x-show="!eventsLoading && events.length > 0"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <template x-for="event in events" :key="event.uid">
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md
+                      transition-all duration-200 p-5 flex flex-col gap-3"
+               :class="event.is_participant ? 'border-green-200 bg-green-50/30' : ''">
+
+            <!-- Header: name + badge -->
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="font-semibold text-gray-800 text-sm leading-snug" x-text="event.name"></h3>
+              <span class="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold"
+                :class="statusBadge(event.status)" x-text="statusLabel(event.status)"></span>
+            </div>
+
+            <!-- Details -->
+            <ul class="space-y-1.5 text-xs text-gray-500">
+              <li x-show="event.assigned_to" class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span x-text="event.assigned_to"></span>
+              </li>
+              <li x-show="event.room" class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2
+                       0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span x-text="event.room"></span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span x-text="fmtDate(event.start)"></span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7
+                       20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002
+                       0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>
+                  <span x-text="event.available_places"></span> /
+                  <span x-text="event.max_participants"></span> places libres
+                </span>
+              </li>
+            </ul>
+
+            <!-- CTA button -->
+            <button @click="toggleBook(event)" :disabled="!isBookable(event)"
+              class="mt-auto w-full py-2 text-xs font-semibold rounded-xl transition-all"
+              :class="bookBtnCls(event)"
+              x-text="bookBtnTxt(event)">
+            </button>
+          </div>
+        </template>
+      </div>
+    </div><!-- /dashboard -->
+
+  </main><!-- /main -->
+
+
+  <!-- ======================================================= SETTINGS PANEL -->
+  <!-- Overlay -->
+  <div x-show="showSettings" x-cloak
+    class="fixed inset-0 bg-black/30 z-40 transition-opacity"
+    @click="showSettings = false"></div>
+
+  <!-- Panel -->
+  <aside x-show="showSettings" x-cloak
+    class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-gray-200
+           z-50 flex flex-col slide-in overflow-y-auto">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <h2 class="text-base font-bold text-gray-800">Paramètres</h2>
+      <button @click="showSettings = false"
+        class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="p-5 space-y-6 flex-1">
+
+      <!-- Current user pill -->
+      <div x-show="status.current_user"
+        class="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+        <p class="text-sm font-semibold text-yellow-800" x-text="status.current_user?.name"></p>
+        <p class="text-xs text-yellow-600 mt-0.5" x-text="status.current_user?.email"></p>
+      </div>
+
+      <!-- Facility section -->
+      <section>
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Salle de sport</h3>
+        <div x-show="status.current_facility"
+          class="p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
+          <p class="text-sm font-semibold text-gray-700" x-text="status.current_facility?.name"></p>
+          <p class="text-xs text-gray-500 mt-0.5" x-text="status.current_facility?.address || ''"></p>
+        </div>
+        <button @click="loadFacilities()"
+          class="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium
+                 rounded-xl transition-colors">
+          Changer de salle
+        </button>
+
+        <!-- Facility picker (appears after clicking button) -->
+        <div x-show="facilities.length > 0 && showFacilityList" class="mt-2 space-y-1.5">
+          <template x-for="(f, i) in facilities" :key="i">
+            <button @click="selectFacility(i)"
+              class="w-full text-left p-3 bg-gray-50 hover:bg-yellow-50 border border-gray-200
+                     hover:border-yellow-300 rounded-xl text-sm transition-colors">
+              <p class="font-medium text-gray-700" x-text="f.name"></p>
+              <p class="text-xs text-gray-400 mt-0.5" x-text="f.address || ''"></p>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <!-- Accounts section -->
+      <section>
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Comptes</h3>
+        <div class="space-y-2">
+          <template x-for="(u, i) in users" :key="i">
+            <div class="flex items-center justify-between p-3 rounded-xl border transition-colors"
+              :class="status.user_choice === i
+                ? 'border-yellow-300 bg-yellow-50'
+                : 'border-gray-200 bg-gray-50'">
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-700 truncate"
+                  x-text="u.name || u.email"></p>
+                <p class="text-xs text-gray-500 truncate" x-text="u.email"></p>
+              </div>
+              <div class="flex gap-1.5 ml-2 shrink-0">
+                <button x-show="status.user_choice !== i" @click="selectUser(i)"
+                  class="p-1.5 bg-yellow-100 hover:bg-yellow-200 rounded-lg text-yellow-700 transition-colors"
+                  title="Utiliser ce compte">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </button>
+                <button @click="deleteUser(i)"
+                  class="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                  title="Supprimer ce compte">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5
+                         7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Add account toggle -->
+        <button @click="showAddUser = !showAddUser"
+          class="mt-3 w-full py-2 px-4 border border-dashed border-gray-300 hover:border-yellow-400
+                 text-gray-500 hover:text-yellow-600 text-sm rounded-xl transition-colors">
+          + Ajouter un compte
+        </button>
+
+        <!-- Add account form -->
+        <div x-show="showAddUser" class="mt-3 space-y-3">
+          <div x-show="loginError"
+            class="p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-500 text-xs"
+            x-text="loginError"></div>
+          <input x-model="loginForm.email" type="email" placeholder="Email"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2
+                   focus:ring-yellow-400 focus:border-transparent outline-none"/>
+          <input x-model="loginForm.password" type="password" placeholder="Mot de passe"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2
+                   focus:ring-yellow-400 focus:border-transparent outline-none"/>
+          <button @click="doLogin()" :disabled="loginLoading"
+            class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-60
+                   text-white text-sm font-semibold rounded-xl transition-colors">
+            <span x-text="loginLoading ? 'Connexion…' : 'Ajouter'"></span>
+          </button>
+        </div>
+      </section>
+    </div><!-- /panel body -->
+  </aside>
+
+
+  <!-- ======================================================= JAVASCRIPT -->
+  <script>
+  function app() {
+    return {
+      /* ─── state ─── */
+      status:     {},
+      events:     [],
+      users:      [],
+      facilities: [],
+      autoBook:   false,
+
+      /* ─── UI ─── */
+      setupStep:       1,
+      showSettings:    false,
+      showAddUser:     false,
+      showFacilityList: false,
+      eventsLoading:   true,
+      refreshing:      false,
+      loginLoading:    false,
+      facilitiesLoading: false,
+      loginError:      '',
+      loginForm:       { email: '', password: '' },
+
+      /* ─── WebSocket ─── */
+      wsConnected: false,
+      ws:          null,
+
+      /* ================================================================ */
+      async init() {
+        await this.loadStatus();
+        await this.loadUsers();
+        if (this.status.configured) {
+          await this.loadEvents();
+        } else if (this.users.length > 0 && this.status.user_choice !== null) {
+          this.setupStep = 2;
+          await this.loadFacilities();
+        }
+        this.connectWS();
+        // Periodic refresh when tab is visible
+        setInterval(() => {
+          if (this.status.configured && !document.hidden) this.loadEvents();
+        }, 30_000);
+      },
+
+      /* ─── data loaders ─── */
+      async loadStatus() {
+        try {
+          this.status = await fetch('/api/status').then(r => r.json());
+          this.autoBook = this.status.auto_book;
+        } catch (e) { console.error('status', e); }
+      },
+      async loadUsers() {
+        try {
+          const d = await fetch('/api/users').then(r => r.json());
+          this.users = d.users || [];
+        } catch (e) { console.error('users', e); }
+      },
+      async loadEvents() {
+        this.eventsLoading = true;
+        try {
+          const d = await fetch('/api/events').then(r => r.json());
+          this.events = d.events || [];
+        } catch (e) { console.error('events', e); }
+        this.eventsLoading = false;
+      },
+      async loadFacilities() {
+        this.facilitiesLoading = true;
+        this.showFacilityList = false;
+        try {
+          const r = await fetch('/api/facilities');
+          if (r.ok) {
+            const d = await r.json();
+            this.facilities = d.facilities || [];
+            this.showFacilityList = true;
+          }
+        } catch (e) { console.error('facilities', e); }
+        this.facilitiesLoading = false;
+      },
+
+      /* ─── actions ─── */
+      async doLogin() {
+        this.loginError = '';
+        this.loginLoading = true;
+        try {
+          const r = await fetch('/api/auth/login', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(this.loginForm),
+          });
+          if (!r.ok) {
+            const e = await r.json();
+            this.loginError = e.detail || 'Identifiants invalides';
+          } else {
+            this.loginForm   = { email: '', password: '' };
+            this.showAddUser = false;
+            this.loginError  = '';
+            await this.loadUsers();
+            await this.loadStatus();
+            if (!this.status.configured) {
+              this.setupStep = 2;
+              await this.loadFacilities();
+            } else {
+              await this.loadEvents();
+            }
+          }
+        } catch (e) { this.loginError = 'Erreur réseau'; }
+        this.loginLoading = false;
+      },
+
+      async deleteUser(index) {
+        if (!confirm('Supprimer ce compte ?')) return;
+        await fetch(`/api/users/${index}`, { method: 'DELETE' });
+        await this.loadUsers();
+        await this.loadStatus();
+      },
+
+      async selectUser(index) {
+        await fetch('/api/users/select', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ index }),
+        });
+        await this.loadStatus();
+        this.setupStep = 2;
+        await this.loadFacilities();
+        this.showSettings = false;
+      },
+
+      async selectFacility(index) {
+        await fetch('/api/facilities/select', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ index }),
+        });
+        this.facilities      = [];
+        this.showFacilityList = false;
+        await this.loadStatus();
+        this.showSettings = false;
+        if (this.status.configured) await this.loadEvents();
+      },
+
+      async refreshEvents() {
+        this.refreshing = true;
+        try {
+          const d = await fetch('/api/events/refresh', { method: 'POST' }).then(r => r.json());
+          this.events = d.events || [];
+        } catch (e) { console.error(e); }
+        this.refreshing = false;
+      },
+
+      async toggleBook(event) {
+        // Optimistic UI update
+        const idx = this.events.findIndex(e => e.uid === event.uid);
+        if (idx >= 0) this.events[idx] = { ...this.events[idx], status: 'Booking' };
+        try {
+          await fetch(`/api/events/${event.uid}/toggle`, { method: 'POST' });
+        } catch (e) { console.error(e); }
+      },
+
+      async toggleAutoBook() {
+        await fetch('/api/autobook', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ enabled: this.autoBook }),
+        });
+      },
+
+      /* ─── WebSocket ─── */
+      connectWS() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        this.ws = new WebSocket(`${proto}://${location.host}/ws`);
+        this.ws.onopen  = () => { this.wsConnected = true; };
+        this.ws.onclose = () => {
+          this.wsConnected = false;
+          setTimeout(() => this.connectWS(), 3_000);
+        };
+        this.ws.onerror = () => { this.wsConnected = false; };
+        this.ws.onmessage = ({ data }) => {
+          const msg = JSON.parse(data);
+          if (msg.type === 'events_update') {
+            this.events       = msg.events;
+            this.eventsLoading = false;
+          }
+        };
+        // Keep-alive ping
+        setInterval(() => {
+          if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send('ping');
+        }, 25_000);
+      },
+
+      /* ─── UI helpers ─── */
+      statusBadge(s) {
+        return {
+          Open:         'bg-cyan-100 text-cyan-700',
+          Booked:       'bg-green-100 text-green-700',
+          Booking:      'bg-yellow-100 text-yellow-700',
+          Full:         'bg-red-100 text-red-600',
+          WaitingList:  'bg-amber-100 text-amber-700',
+          Progress:     'bg-emerald-100 text-emerald-700',
+          Ended:        'bg-gray-100 text-gray-400',
+          Planned:      'bg-blue-100 text-blue-600',
+          Unshedulable: 'bg-rose-100 text-rose-500',
+        }[s] || 'bg-gray-100 text-gray-500';
+      },
+      statusLabel(s) {
+        return {
+          Open:         'Disponible',
+          Booked:       'Réservé ✓',
+          Booking:      'En cours…',
+          Full:         'Complet',
+          WaitingList:  'Liste d\'attente',
+          Progress:     'En cours',
+          Ended:        'Terminé',
+          Planned:      'Planifié',
+          Unshedulable: 'Non dispo',
+        }[s] || s;
+      },
+      isBookable(e) {
+        return ['Open', 'Full', 'Booked', 'WaitingList'].includes(e.status);
+      },
+      bookBtnCls(e) {
+        if (!this.isBookable(e)) return 'bg-gray-100 text-gray-400 cursor-not-allowed';
+        if (e.status === 'Booked')   return 'bg-red-100 hover:bg-red-200 text-red-600 cursor-pointer';
+        if (e.status === 'Booking')  return 'bg-yellow-100 text-yellow-600 cursor-wait';
+        return 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer shadow-sm';
+      },
+      bookBtnTxt(e) {
+        return {
+          Booked:      'Annuler la réservation',
+          Booking:     'Réservation en cours…',
+          Full:        'Rejoindre la liste',
+          WaitingList: 'Quitter la liste',
+        }[e.status] || (this.isBookable(e) ? 'Réserver' : 'Indisponible');
+      },
+      fmtDate(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+             + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      },
+    };
+  }
+  </script>
+</body>
+</html>
