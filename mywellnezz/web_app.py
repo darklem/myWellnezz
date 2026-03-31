@@ -18,7 +18,7 @@ if _pkg_dir not in sys.path:
     sys.path.insert(0, _pkg_dir)
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.requests import Request
@@ -159,6 +159,46 @@ class SelectRequest(BaseModel):
 
 class AutoBookRequest(BaseModel):
     enabled: bool
+
+
+# ---------------------------------------------------------------------------
+# App icon – served at /favicon.svg and /apple-touch-icon.png (SVG fallback)
+# ---------------------------------------------------------------------------
+_SVG_ICON = """\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded-square background -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+
+  <!-- Dumbbell ─ left plate -->
+  <rect x="4"  y="21" width="12" height="22" rx="3.5" fill="white"/>
+  <!-- left collar -->
+  <rect x="16" y="27" width="7"  height="10" rx="2"   fill="white"/>
+  <!-- bar -->
+  <rect x="23" y="29" width="18" height="6"  rx="3"   fill="white"/>
+  <!-- right collar -->
+  <rect x="41" y="27" width="7"  height="10" rx="2"   fill="white"/>
+  <!-- right plate -->
+  <rect x="48" y="21" width="12" height="22" rx="3.5" fill="white"/>
+
+  <!-- Booking indicator: small white circle + check, bottom-right -->
+  <circle cx="50" cy="50" r="10" fill="#10B981"/>
+  <polyline points="45,50 48.5,53.5 55,46.5"
+            fill="none" stroke="white" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+</svg>"""
+
+
+@app.get("/favicon.svg", include_in_schema=False)
+async def favicon_svg():
+    return Response(content=_SVG_ICON, media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 # ---------------------------------------------------------------------------
