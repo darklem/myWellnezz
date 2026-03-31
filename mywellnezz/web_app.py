@@ -36,6 +36,11 @@ mw = MyWellnezz()
 _ws_clients: List[WebSocket] = []
 _bg_task: Optional[asyncio.Task] = None
 _broadcaster_task: Optional[asyncio.Task] = None
+# Facilities cache keyed by user email.
+# Avoids calling write_config() inside the bg loop: write_config() calls
+# remove_none_values() which mutates UserContext.__dict__ in place, silently
+# deleting attributes like display_height → AttributeError in _events_loop.
+_facilities_cache: dict = {}
 
 _templates = Jinja2Templates(directory=os.path.join(_pkg_dir, "templates"))
 
@@ -77,12 +82,14 @@ async def _bg_loop():
                 await asyncio.sleep(5)
                 continue
             user = c.get_user()
-            # Hydrate facilities list when absent (first run or after reload)
-            if not user.facilities:
-                user.facilities = await my_facilities(user) or []
-                if user.facilities:
-                    c.users[c.user_choice] = user
-                    write_config(c)
+            # Hydrate facilities from cache; fetch from API only on first call.
+            # Never call write_config() here: it mutates UserContext.__dict__
+            # via remove_none_values(), stripping attributes like display_height.
+            if user.usr not in _facilities_cache:
+                fetched = await my_facilities(user) or []
+                if fetched:
+                    _facilities_cache[user.usr] = fetched
+            user.facilities = _facilities_cache.get(user.usr, [])
             if not user.facilities:
                 await asyncio.sleep(10)
                 continue
