@@ -8,7 +8,7 @@ import asyncio
 import os
 import sys
 from contextlib import asynccontextmanager
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from loguru import logger
 
@@ -32,7 +32,9 @@ from modules.math_util import write_obfuscation
 # ---------------------------------------------------------------------------
 # Global state
 # ---------------------------------------------------------------------------
-mw = MyWellnezz()
+# One engine per account (keyed by email) so that every user's booking and
+# waiting-list tasks keep running, whichever account is shown in the UI.
+_mws: Dict[str, MyWellnezz] = {}
 _ws_clients: List[WebSocket] = []
 _bg_task: Optional[asyncio.Task] = None
 _broadcaster_task: Optional[asyncio.Task] = None
@@ -57,7 +59,8 @@ async def lifespan(app: FastAPI):
     if c.user_choice is not None and c.facility_choice is not None:
         _bg_task = asyncio.create_task(_bg_loop())
     yield
-    mw.run = False
+    for m in _mws.values():
+        m.run = False
     for task in (_bg_task, _broadcaster_task):
         if task and not task.done():
             task.cancel()
@@ -69,32 +72,51 @@ app = FastAPI(title="myWellnezz", version="1.2.0", lifespan=lifespan)
 # ---------------------------------------------------------------------------
 # Background tasks
 # ---------------------------------------------------------------------------
+def _mw_for(user: UserContext) -> MyWellnezz:
+    """Return (creating if needed) the engine dedicated to this account."""
+    m = _mws.get(user.usr)
+    if m is None:
+        m = _mws[user.usr] = MyWellnezz()
+    return m
+
+
+def _current_mw(c: Config) -> MyWellnezz:
+    return _mw_for(c.get_user())
+
+
 async def _bg_loop():
     """
     Main background loop: keeps the event list up-to-date and manages
-    booking tasks.  Reads config fresh from disk on every iteration so
-    that changes made through the web UI are picked up automatically.
+    booking tasks for every registered account.  Reads config fresh from
+    disk on every iteration so that changes made through the web UI are
+    picked up automatically.
     """
-    while mw.run:
+    while True:
         try:
             c = read_config()
             if c.user_choice is None or c.facility_choice is None:
                 await asyncio.sleep(5)
                 continue
-            user = c.get_user()
-            # Hydrate facilities from cache; fetch from API only on first call.
-            # Never call write_config() here: it mutates UserContext.__dict__
-            # via remove_none_values(), stripping attributes like display_height.
-            if user.usr not in _facilities_cache:
-                fetched = await my_facilities(user) or []
-                if fetched:
-                    _facilities_cache[user.usr] = fetched
-            user.facilities = _facilities_cache.get(user.usr, [])
-            if not user.facilities:
-                await asyncio.sleep(10)
-                continue
-            facility = await c.get_facility()
-            mw.set_event_task(user, facility, c)
+            # Stop engines of accounts removed from the config
+            emails = {u.usr for u in c.users}
+            for email in list(_mws):
+                if email not in emails:
+                    _mws.pop(email).run = False
+            for user in c.users:
+                # Hydrate facilities from cache; fetch from API only on first call.
+                # Never call write_config() here: it mutates UserContext.__dict__
+                # via remove_none_values(), stripping attributes like display_height.
+                if user.usr not in _facilities_cache:
+                    fetched = await my_facilities(user) or []
+                    if fetched:
+                        _facilities_cache[user.usr] = fetched
+                user.facilities = _facilities_cache.get(user.usr, [])
+                if not user.facilities:
+                    continue
+                # facility_choice indexes the selected account's facilities;
+                # fall back to the first gym for the other accounts.
+                fi = c.facility_choice if c.facility_choice < len(user.facilities) else 0
+                _mw_for(user).set_event_task(user, user.facilities[fi], c)
         except Exception as exc:
             logger.error(f"BG loop error: {exc}")
         await asyncio.sleep(5)
@@ -104,8 +126,9 @@ async def _broadcaster():
     """Push live event snapshots to all connected WebSocket clients."""
     while True:
         try:
-            if _ws_clients:
-                events = await mw.get_events()
+            c = read_config() if _ws_clients else None
+            if c and c.user_choice is not None and c.users:
+                events = await _current_mw(c).get_events()
                 payload = {
                     "type": "events_update",
                     "events": [_event_to_dict(e) for e in events.values()],
@@ -230,8 +253,9 @@ async def get_status():
             "email": u.usr,
             "name": f"{u.first_name or ''} {u.last_name or ''}".strip(),
         }
-        if c.facility_choice is not None and u.facilities and c.facility_choice < len(u.facilities):
-            f = u.facilities[c.facility_choice]
+        facilities = u.facilities or _facilities_cache.get(u.usr, [])
+        if c.facility_choice is not None and c.facility_choice < len(facilities):
+            f = facilities[c.facility_choice]
             current_facility = {"name": f.name, "address": f.address or ""}
     return {
         "configured": c.user_choice is not None and c.facility_choice is not None,
@@ -345,6 +369,7 @@ async def get_events_api():
     c = read_config()
     if c.user_choice is None or c.facility_choice is None:
         return {"events": [], "configured": False}
+    mw = _current_mw(c)
     events = await mw.get_events()
     if not events:
         try:
@@ -367,6 +392,7 @@ async def toggle_booking(uid: str):
     if not user.facilities:
         user.facilities = await my_facilities(user) or []
     facility = await c.get_facility()
+    mw = _current_mw(c)
     try:
         event = await mw.get_event(uid)
     except KeyError:
@@ -384,7 +410,7 @@ async def refresh_events_api():
     if not user.facilities:
         user.facilities = await my_facilities(user) or []
     facility = await c.get_facility()
-    events = await mw.set_events(user, facility)
+    events = await _current_mw(c).set_events(user, facility)
     return {"events": [_event_to_dict(e) for e in (events or {}).values()]}
 
 

@@ -32,7 +32,7 @@ class AsciiArt:
         else:
             h = min(self.max_height, image.height)
             w = int(image.width * self.max_width / image.height)
-        image = image.resize((w, h), Image.ANTIALIAS)
+        image = image.resize((w, h), Image.LANCZOS)
         gray = image.convert('L')
         ascii_img = []
         for i in range(h):
